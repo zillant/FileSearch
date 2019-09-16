@@ -15,7 +15,6 @@ namespace FileSearch
 {
     public partial class Form1 : Form
     {
-        public IEnumerable<FileSystemEntry> FileSystemEntries { get; }
         private static ManualResetEvent _stopper = new ManualResetEvent(false);
         private delegate void EventHandle();
         bool _paused;
@@ -38,9 +37,10 @@ namespace FileSearch
         private void btnStart_Click(object sender, EventArgs e)
         {
             startTime = DateTime.Now;
-            treeView1.PathSeparator = @"\";
-            _FilesInDirectory = Directory.GetFiles(txtBxDirName.Text, txtBxFileName.Text, SearchOption.AllDirectories);
-            progressBar1.Maximum = _FilesInDirectory.Length;
+            
+            
+                //Directory.GetFiles(txtBxDirName.Text, txtBxFileName.Text, SearchOption.AllDirectories);
+            
             
             _SearchThrd = new Thread(new ThreadStart(SearchFile));
             timer1.Start();
@@ -62,60 +62,76 @@ namespace FileSearch
         private void SearchFile()
         {
             _isWork = true;
-            var FilesInDirectory = _FilesInDirectory;
+            var FilesInDirectory = txtBxDirName.Text;
+            var Pattern = txtBxFileName.Text;
             List<string> paths = new List<string>();
             var count = 0;
-            var root = new TreeNode();
-            treeView1.Invoke(new Action(() => treeView1.Nodes.Add(root)));
-            
-            try
-            {
-                foreach (var f in FilesInDirectory)
-                {
-                    _stopper.WaitOne();
-                    lblFilename.Invoke(new Action(() => lblFilename.Text = f));
-                    if (File.ReadAllText(f).Contains(txtBxSearch.Text))
-                    {
-                        //listBox1.Invoke(new Action(() => listBox1.Items.Add(f)));
-                        paths.Add(f);
-                        root.
-                    }
-                    count++;
-                    progressBar1.Invoke(new Action(() => progressBar1.Value = count));
-                    lblFileCount.Invoke(new Action(() => lblFileCount.Text = $"Файлов обработано {count}"));
-                }
+            char PathSeparator = '\\';
+            DirectoryInfo workDirectory = new DirectoryInfo(FilesInDirectory);
 
-                _isWork = false;
-            }
-            catch (System.Exception excp)
-            { }
+            IEnumerable<string> SearchedFiles = workDirectory.GetFiles(Pattern, SearchOption.AllDirectories).Select(f => f.FullName.Substring(f.FullName.LastIndexOf(FilesInDirectory))).ToList();
+            progressBar1.Invoke(new Action(() => progressBar1.Maximum = SearchedFiles.Count()));
+            SearchedFiles.Where(s => File.ReadAllText(s).Contains(txtBxSearch.Text)).ToList();
+            //try
+            //{
+            //    foreach (var f in SearchedFiles)
+            //    {
+            //        var root = new TreeNode();
+            //        _stopper.WaitOne();
+            //        lblFilename.Invoke(new Action(() => lblFilename.Text = f));
+
+            //        SearchedFiles.Where(s => File.ReadAllText(s).Contains(txtBxSearch.Text)).ToList();
+                   
+            //        count++;
+            //        progressBar1.Invoke(new Action(() => progressBar1.Value = count));
+            //        lblFileCount.Invoke(new Action(() => lblFileCount.Text = $"Файлов обработано {count}"));
+            //        treeView1.Invoke(new Action(() => treeView1.Nodes.Add(root)));
+            //    }
+
+            //    _isWork = false;
+            //}
+            //catch (System.Exception excp)
+            //{ }
+
+            OutputTreeView(treeView1, SearchedFiles, PathSeparator);
 
           // if (count == FilesInDirectory.Length) _stopper.Close();
             
         }
 
-        private static void PopulateTreeView(TreeView treeView, IEnumerable<string> paths, char pathSeparator)
+
+        private static void OutputTreeView(TreeView TreeviewNode, IEnumerable<string> UniqueFilesPath, char PathSeparator)
         {
-            TreeNode lastNode = null;
-            string subPathAgg;
-            foreach (string path in paths)
+            TreeNode LastNode = null;
+
+            foreach (string PathToFile in UniqueFilesPath)
             {
-                subPathAgg = string.Empty;
-                foreach (string subPath in path.Split(pathSeparator))
+                string SubPathAgg = string.Empty;
+
+                foreach (string SubPath in PathToFile.Split(PathSeparator))
                 {
-                    subPathAgg += subPath + pathSeparator;
-                    TreeNode[] nodes = treeView.Nodes.Find(subPathAgg, true);
-                    if (nodes.Length == 0)
-                        if (lastNode == null)
-                            lastNode = treeView.Nodes.Add(subPathAgg, subPath);
+                    SubPathAgg += SubPath + PathSeparator;
+
+                    TreeNode[] Nodes = TreeviewNode.Nodes.Find(SubPathAgg, true);
+
+                    if (Nodes.Length == 0)
+                    {
+                        if (LastNode == null)
+                        {
+                            LastNode = TreeviewNode.Nodes.Add(SubPathAgg, SubPath);
+                        }
                         else
-                            lastNode = lastNode.Nodes.Add(subPathAgg, subPath);
+                        {
+                            LastNode = LastNode.Nodes.Add(SubPathAgg, SubPath);
+                        }
+                    }
                     else
-                        lastNode = nodes[0];
+                    {
+                        LastNode = Nodes[0];
+                    }
                 }
             }
         }
-
         private void button2_Click(object sender, EventArgs e)
         {
             if (!_paused)
