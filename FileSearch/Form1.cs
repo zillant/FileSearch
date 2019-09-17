@@ -118,11 +118,12 @@ namespace FileSearch
                     {
                         if (LastNode == null)
                         {
-                            LastNode = TreeviewNode.Nodes.Add(SubPathAgg, SubPath);
+                            TreeviewNode.Invoke(new Action(() => LastNode = TreeviewNode.Nodes.Add(SubPathAgg, SubPath))); ;
                         }
                         else
                         {
-                            LastNode = LastNode.Nodes.Add(SubPathAgg, SubPath);
+
+                            TreeviewNode.Invoke(new Action(() => LastNode = LastNode.Nodes.Add(SubPathAgg, SubPath)));
                         }
                     }
                     else
