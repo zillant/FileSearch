@@ -167,10 +167,7 @@ namespace FileSearch
             }
         }
 
-        private void panel3_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
+        
     }
 
 
