@@ -21,10 +21,12 @@ namespace FileSearch
         Thread _SearchThrd;
         string[] _FilesInDirectory;
         bool _isWork;
+        bool _isSearched;
         DateTime startTime;
         public Form1()
         {
             InitializeComponent();
+            lblFilename.Text = " ";
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -37,10 +39,8 @@ namespace FileSearch
         private void btnStart_Click(object sender, EventArgs e)
         {
             startTime = DateTime.Now;
-            
-            
-                //Directory.GetFiles(txtBxDirName.Text, txtBxFileName.Text, SearchOption.AllDirectories);
-            
+            treeView1.Nodes.Clear();
+            _isSearched = true;
             
             _SearchThrd = new Thread(new ThreadStart(SearchFile));
             timer1.Start();
@@ -64,39 +64,34 @@ namespace FileSearch
             _isWork = true;
             var FilesInDirectory = txtBxDirName.Text;
             var Pattern = txtBxFileName.Text;
-            List<string> paths = new List<string>();
+            List<string> files = new List<string>();
             var count = 0;
             char PathSeparator = '\\';
+            
             DirectoryInfo workDirectory = new DirectoryInfo(FilesInDirectory);
 
             IEnumerable<string> SearchedFiles = workDirectory.GetFiles(Pattern, SearchOption.AllDirectories).Select(f => f.FullName.Substring(f.FullName.LastIndexOf(FilesInDirectory))).ToList();
-            progressBar1.Invoke(new Action(() => progressBar1.Maximum = SearchedFiles.Count()));
-            SearchedFiles.Where(s => File.ReadAllText(s).Contains(txtBxSearch.Text)).ToList();
-            //try
-            //{
-            //    foreach (var f in SearchedFiles)
-            //    {
-            //        var root = new TreeNode();
-            //        _stopper.WaitOne();
-            //        lblFilename.Invoke(new Action(() => lblFilename.Text = f));
-
-            //        SearchedFiles.Where(s => File.ReadAllText(s).Contains(txtBxSearch.Text)).ToList();
-                   
-            //        count++;
-            //        progressBar1.Invoke(new Action(() => progressBar1.Value = count));
-            //        lblFileCount.Invoke(new Action(() => lblFileCount.Text = $"Файлов обработано {count}"));
-            //        treeView1.Invoke(new Action(() => treeView1.Nodes.Add(root)));
-            //    }
-
-            //    _isWork = false;
-            //}
-            //catch (System.Exception excp)
-            //{ }
-
-            OutputTreeView(treeView1, SearchedFiles, PathSeparator);
-
-          // if (count == FilesInDirectory.Length) _stopper.Close();
+            string[] SearchedFilesAr = new string[SearchedFiles.Count()];
+            SearchedFilesAr = SearchedFiles.ToArray();
             
+            progressBar1.Invoke(new Action(() => progressBar1.Maximum = SearchedFilesAr.Length));
+
+            while (_isSearched)
+            {
+                foreach (var f in SearchedFilesAr)
+                {
+                    _stopper.WaitOne();
+                    if (File.ReadAllLines(f).Contains(txtBxSearch.Text)) files.Add(f);
+                    count++;
+                    progressBar1.Invoke(new Action(() => progressBar1.Value = count));
+                    lblFileCount.Invoke(new Action(() => lblFileCount.Text = $"Файлов обработано {count}"));
+                    lblFilename.Invoke(new Action(() => lblFilename.Text = f.ToString()));
+                    OutputTreeView(treeView1, files, PathSeparator);
+                }
+                _isWork = false;
+                _isSearched = false;
+            }
+                       
         }
 
 
@@ -170,6 +165,11 @@ namespace FileSearch
             {
                 lblElapsedTime.Invoke(new Action(() => lblElapsedTime.Text = elapsedTime));
             }
+        }
+
+        private void panel3_Paint(object sender, PaintEventArgs e)
+        {
+
         }
     }
 
